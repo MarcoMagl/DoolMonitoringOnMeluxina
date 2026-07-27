@@ -1,6 +1,7 @@
 #!/bin/bash -l
 # Copyright (c) 2026 Marco Magliulo, Xavier Besseron - LuxProvide
 #SBATCH --job-name="TestJobMonitoringWithDool""
+#SBATCH --qos default 
 #SBATCH -N 1
 #SBATCH --ntasks=1
 #SBATCH --output=%x-%j.out
@@ -67,9 +68,6 @@ kill $DOOL_PID 2>/dev/null
 wait $DOOL_PID 2>/dev/null
 
 echo "Starting post-processing of dool output ! "
-
-
-
 
 export DOOL_PLOTS=$PWD/dooloutput/dool_result_profiling_${SLURM_JOBID}
 python dool_postprocess.py $DOOL_OUTPUT -o $DOOL_PLOTS.pdf
