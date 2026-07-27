@@ -3,17 +3,15 @@
 #SBATCH --job-name="TestJobMonitoringWithDool""
 #SBATCH -N 1
 #SBATCH --ntasks=1
-#SBATCH --output=slurm-ReFrameCheck-%x-%j.out
-#SBATCH --error=slurm-ReFrameCheck-%x-%j.out
+#SBATCH --output=%x-%j.out
+#SBATCH --error=%x-%j.out
 #SBATCH --time=00:01:00
 
 module purge 
 
-
 python3.11 -m venv PostProcessEnv 
 source PostProcessEnv/bin/activate
 python -m pip install matplotlib pandas pynvml 
-
 
 ml CUDA 
 
