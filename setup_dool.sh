@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) 2026 Marco Magliulo, Xavier Besseron - LuxProvide
+# All rights reserved.
 
 set -e
 

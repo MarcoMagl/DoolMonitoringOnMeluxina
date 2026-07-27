@@ -1,5 +1,5 @@
-
 #!/bin/bash -l
+# Copyright (c) 2026 Marco Magliulo, Xavier Besseron - LuxProvide
 #SBATCH --job-name="TestJobMonitoringWithDool""
 #SBATCH -N 1
 #SBATCH --ntasks=1

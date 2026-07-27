@@ -2,6 +2,7 @@
 """
 Post-processing script for dool CSV output files.
 Generates multi-panel matplotlib plots with shared time axis.
+Copyright (c) 2026 Marco Magliulo, Xavier Besseron - LuxProvide
 """
 
 import pandas as pd
