@@ -52,8 +52,9 @@ read_dool <- function(filepath) {
     gpu_mem_3       = "gpu3...35"
   )
   
-  # Only rename columns that actually exist
-  existing_renames <- rename_map[names(rename_map) %in% colnames(df)]
+  # Only rename columns that actually exist (check old names, not new names)
+  old_names <- unname(rename_map)
+  existing_renames <- rename_map[old_names %in% colnames(df)]
   if (length(existing_renames) > 0) {
     df <- df |> rename(!!!existing_renames)
   }
