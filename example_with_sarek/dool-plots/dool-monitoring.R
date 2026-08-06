@@ -36,22 +36,27 @@ read_dool <- function(filepath) {
   # Skip the first 4 metadata rows; row 5 is category labels, row 6 is column names
   df <- read_csv(filepath, skip = 5, show_col_types = FALSE)
 
-  # Rename duplicate columns to avoid ambiguity
+  # Rename duplicate columns to avoid ambiguity (only if they exist)
   # GPU usage % columns: total, gpu0..gpu3
   # GPU memory columns: total, gpu0..gpu3 (duplicated names)
-  df <- df |>
-    rename(
-      gpu_usage_total = "total...26",
-      gpu_usage_0     = "gpu0...27",
-      gpu_usage_1     = "gpu1...28",
-      gpu_usage_2     = "gpu2...29",
-      gpu_usage_3     = "gpu3...30",
-      gpu_mem_total   = "total...31",
-      gpu_mem_0       = "gpu0...32",
-      gpu_mem_1       = "gpu1...33",
-      gpu_mem_2       = "gpu2...34",
-      gpu_mem_3       = "gpu3...35"
-    )
+  rename_map <- list(
+    gpu_usage_total = "total...26",
+    gpu_usage_0     = "gpu0...27",
+    gpu_usage_1     = "gpu1...28",
+    gpu_usage_2     = "gpu2...29",
+    gpu_usage_3     = "gpu3...30",
+    gpu_mem_total   = "total...31",
+    gpu_mem_0       = "gpu0...32",
+    gpu_mem_1       = "gpu1...33",
+    gpu_mem_2       = "gpu2...34",
+    gpu_mem_3       = "gpu3...35"
+  )
+  
+  # Only rename columns that actually exist
+  existing_renames <- rename_map[names(rename_map) %in% colnames(df)]
+  if (length(existing_renames) > 0) {
+    df <- df |> rename(!!!existing_renames)
+  }
 
   df |>
     mutate(node = node)
@@ -141,28 +146,34 @@ p2 <- ggplot(mem_data, aes(x = time_hours, y = value_gb, fill = metric)) +
   theme_minimal() +
   theme(legend.position = "bottom")
 
-# --- 5c. GPU utilization per node ---
-gpu_data <- all_data |>
-  select(node, time_hours, gpu_usage_total)
+# --- 5c. GPU utilization per node (only if GPU columns exist) ---
+has_gpu <- "gpu_usage_total" %in% colnames(all_data)
+has_gpu_mem <- all(c("gpu_mem_0", "gpu_mem_1", "gpu_mem_2", "gpu_mem_3") %in% colnames(all_data))
 
-p3 <- ggplot(gpu_data, aes(x = time_hours, y = gpu_usage_total)) +
-  geom_area(alpha = 0.7, fill = "steelblue") +
-  facet_wrap(~ node, ncol = 1, scales = "free_y") +
-  labs(title = "GPU Utilization Over Time",
-       x = "Time (hours)", y = "GPU %") +
-  theme_minimal()
+if (has_gpu) {
+  gpu_data <- all_data |>
+    select(node, time_hours, gpu_usage_total)
 
-# --- 5d. GPU memory usage per node (total across all GPUs) ---
-gpu_mem_data <- all_data |>
-  select(node, time_hours, gpu_mem_0, gpu_mem_1, gpu_mem_2, gpu_mem_3) |>
-  mutate(gpu_mem_total_gb = rowSums(across(c(gpu_mem_0, gpu_mem_1, gpu_mem_2, gpu_mem_3)), na.rm = TRUE) / (1024^3))
+  p3 <- ggplot(gpu_data, aes(x = time_hours, y = gpu_usage_total)) +
+    geom_area(alpha = 0.7, fill = "steelblue") +
+    facet_wrap(~ node, ncol = 1, scales = "free_y") +
+    labs(title = "GPU Utilization Over Time",
+         x = "Time (hours)", y = "GPU %") +
+    theme_minimal()
+}
 
-p4 <- ggplot(gpu_mem_data, aes(x = time_hours, y = gpu_mem_total_gb)) +
-  geom_area(alpha = 0.7, fill = "steelblue") +
-  facet_wrap(~ node, ncol = 1, scales = "free_y") +
-  labs(title = "GPU Memory Usage Over Time (Total GB)",
-       x = "Time (hours)", y = "GB") +
-  theme_minimal()
+if (has_gpu_mem) {
+  gpu_mem_data <- all_data |>
+    select(node, time_hours, gpu_mem_0, gpu_mem_1, gpu_mem_2, gpu_mem_3) |>
+    mutate(gpu_mem_total_gb = rowSums(across(c(gpu_mem_0, gpu_mem_1, gpu_mem_2, gpu_mem_3)), na.rm = TRUE) / (1024^3))
+
+  p4 <- ggplot(gpu_mem_data, aes(x = time_hours, y = gpu_mem_total_gb)) +
+    geom_area(alpha = 0.7, fill = "steelblue") +
+    facet_wrap(~ node, ncol = 1, scales = "free_y") +
+    labs(title = "GPU Memory Usage Over Time (Total GB)",
+         x = "Time (hours)", y = "GB") +
+    theme_minimal()
+}
 
 # --- 5e. Summary violin plots across nodes ---
 # CPU total usage by node (100% - idle%)
@@ -180,29 +191,42 @@ p5 <- ggplot(cpu_total_data,
   theme_minimal() +
   theme(legend.position = "none")
 
-# GPU usage summary by node
-p6 <- ggplot(gpu_data,
-       aes(x = factor(node), y = gpu_usage_total, fill = factor(node))) +
-  geom_violin(alpha = 0.7) +
-  scale_fill_brewer(palette = "Greens") +
-  scale_y_continuous(limits = c(0, 100)) +
-  labs(title = "GPU Usage % by Node",
-       x = "Node", y = "GPU %") +
-  theme_minimal() +
-  theme(legend.position = "none")
+if (has_gpu) {
+  p6 <- ggplot(gpu_data,
+         aes(x = factor(node), y = gpu_usage_total, fill = factor(node))) +
+    geom_violin(alpha = 0.7) +
+    scale_fill_brewer(palette = "Greens") +
+    scale_y_continuous(limits = c(0, 100)) +
+    labs(title = "GPU Usage % by Node",
+         x = "Node", y = "GPU %") +
+    theme_minimal() +
+    theme(legend.position = "none")
+}
 
 # --- Write PDF ---
 # Open multi-page PDF device
 pdf(output_pdf, width = 14, height = 10)
 
-# Page 1: CPU usage on top, GPU utilization below (vertical stack, aligned x-axes)
-print(p1 / p3 + plot_layout(ncol = 1, heights = c(1, 1)) & theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+# Page 1: CPU usage on top, GPU utilization below (if available)
+if (has_gpu) {
+  print(p1 / p3 + plot_layout(ncol = 1, heights = c(1, 1)) & theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+} else {
+  print(p1 + theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+}
 
-# Page 2: Memory usage on top, GPU memory below (vertical stack, aligned x-axes)
-print(p2 / p4 + plot_layout(ncol = 1, heights = c(1, 1)) & theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+# Page 2: Memory usage on top, GPU memory below (if available)
+if (has_gpu_mem) {
+  print(p2 / p4 + plot_layout(ncol = 1, heights = c(1, 1)) & theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+} else {
+  print(p2 + theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+}
 
-# Page 3: CPU total usage + GPU usage violin plots (side by side)
-print(p5 + p6 + plot_layout(nrow = 1, widths = c(1, 1)))
+# Page 3: CPU total usage + GPU usage violin plots (if GPU available)
+if (has_gpu) {
+  print(p5 + p6 + plot_layout(nrow = 1, widths = c(1, 1)))
+} else {
+  print(p5)
+}
 
 # Close PDF device
 dev.off()
