@@ -210,16 +210,16 @@ pdf(output_pdf, width = 14, height = 10)
 
 # Page 1: CPU usage on top, GPU utilization below (if available)
 if (has_gpu) {
-  print(p1 / p3 + plot_layout(ncol = 1, heights = c(1, 1)) & theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+  print(p1 / p3 + plot_layout(ncol = 1, heights = c(1, 1)))
 } else {
-  print(p1 + theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+  print(p1)
 }
 
 # Page 2: Memory usage on top, GPU memory below (if available)
 if (has_gpu_mem) {
-  print(p2 / p4 + plot_layout(ncol = 1, heights = c(1, 1)) & theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+  print(p2 / p4 + plot_layout(ncol = 1, heights = c(1, 1)))
 } else {
-  print(p2 + theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+  print(p2)
 }
 
 # Page 3: CPU total usage + GPU usage violin plots (if GPU available)
