@@ -231,38 +231,28 @@ def plot_gpu_usage(df, ax):
 
 
 def plot_gpu_memory(df, ax):
-    """Plot GPU memory usage metrics."""
-    # Look for nv-gpu memory columns
-    mem_cols = [col for col in df.columns if 'gpu' in col.lower() and 'mem' in col.lower()]
-    
-    if not mem_cols:
-        # Try alternative column names
-        mem_cols = [col for col in df.columns if col.startswith('gpu') and 'total' not in col.lower()]
-        # Filter to only memory-related columns (typically have larger values)
-        if mem_cols:
-            # Check if these look like memory values (typically in GB range)
-            sample_val = df[mem_cols[0]].dropna().iloc[0] if not df[mem_cols[0]].dropna().empty else 0
-            if sample_val > 100:  # Likely memory in bytes
-                pass
-            else:
-                mem_cols = []
-    
-    if not mem_cols:
+    """Plot GPU memory usage metrics.
+
+    dool --nvidia-gpu-mem reports used memory per GPU (in bytes). Because
+    --nvidia-gpu already occupies gpu0..gpu3, these appear as the _1-suffixed
+    columns (gpu0_1..gpu3_1) after de-duplication.
+    """
+    gpu_mem_cols = [col for col in ['gpu0_1', 'gpu1_1', 'gpu2_1', 'gpu3_1'] if col in df.columns]
+
+    if not gpu_mem_cols:
         return False
-    
-    for col in mem_cols:
-        # Convert to GB if values are large (likely in bytes)
-        if df[col].dropna().iloc[0] > 1e9 if not df[col].dropna().empty else False:
-            ax.plot(df['time'], df[col] / (1024**3), label=col, linewidth=1.5)
-        else:
-            ax.plot(df['time'], df[col], label=col, linewidth=1.5)
-    
+
+    for col in gpu_mem_cols:
+        # Values are in bytes -> convert to GB for readability
+        ax.plot(df['time'], df[col] / (1024**3), label=col.upper(), linewidth=1.5)
+
     ax.set_ylabel('GPU Memory (GB)')
     ax.set_title('GPU Memory Usage')
     ax.legend(loc='upper right', fontsize=8)
     ax.grid(True, alpha=0.3)
-    
+
     return True
+
 
 
 def create_plots(df, output_path=None, figsize=(14, 10)):
