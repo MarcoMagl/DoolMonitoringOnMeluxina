@@ -73,3 +73,5 @@ PostProcessEnv/
 output/
 
 *.code-workspace
+*.json
+nvvs.log

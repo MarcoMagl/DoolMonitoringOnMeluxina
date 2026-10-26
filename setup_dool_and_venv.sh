@@ -2,18 +2,16 @@
 # Copyright (c) 2026 Marco Magliulo, Xavier Besseron - LuxProvide
 # All rights reserved.
 
-#set -euo pipefail
-set -x
+set -euo pipefail
 
-# Directory this script lives in (used to locate the post-processor).
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 
 # "Present directory" = wherever the script is invoked from.
 CACHE_DIR="$PWD/.uv-cache"
 VENV_DIR="$PWD/.venv"
 
 REQUIREMENTS=(matplotlib pandas pynvml)
-PLOTTER="$SCRIPT_DIR/dool_postprocess.py"
+
 
 # --- 1. Install uv if it is not installed --------------------------------
 if ! command -v uv >/dev/null 2>&1; then

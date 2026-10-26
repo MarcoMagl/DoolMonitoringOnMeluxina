@@ -7,6 +7,9 @@
 # If OUTPUT_IMAGE is omitted, the plot is shown interactively (matplotlib).
 #
 
+set -x
+# Directory this script lives in (used to locate the post-processor).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- 1. Resolve the input CSV --------------------------------------------
 INPUT_CSV="${1:-}"
@@ -19,7 +22,9 @@ if [ -z "$INPUT_CSV" ] || [ ! -f "$INPUT_CSV" ]; then
 fi
 echo "Input CSV: $INPUT_CSV"
 
+
 # --- 2. Run the plotting script ------------------------------------------
+PLOTTER="$SCRIPT_DIR/dool_postprocess.py"
 if [ -n "${2:-}" ]; then
     python "$PLOTTER" "$INPUT_CSV" -o "$2"
 else
