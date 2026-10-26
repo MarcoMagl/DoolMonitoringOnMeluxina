@@ -68,6 +68,7 @@ PostProcessEnv/
 *~
 *.csv
 *.pdf
+!images/*.pdf
 
 # Output directory
 output/
