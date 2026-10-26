@@ -68,8 +68,11 @@ PostProcessEnv/
 *~
 *.csv
 *.pdf
+!images/*.pdf
 
 # Output directory
 output/
 
 *.code-workspace
+*.json
+nvvs.log

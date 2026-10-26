@@ -53,6 +53,11 @@ def parse_dool_csv(filepath):
     for line in data_lines:
         if line.strip():
             values = [val.strip().strip('"') for val in line.split(',')]
+            # dool appends a trailing comma to every data row, which split()
+            # turns into one extra empty field; drop it so the row aligns
+            # with the header. (No real data column is left empty here.)
+            if len(values) == len(col_names) + 1 and values[-1] == '':
+                values = values[:-1]
             if len(values) == len(col_names):
                 data.append(values)
     
