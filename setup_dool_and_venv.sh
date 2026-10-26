@@ -50,7 +50,9 @@ source "$VENV_DIR/bin/activate"
 # Dependencies (idempotent: fast when already installed).
 uv pip install "${REQUIREMENTS[@]}"
 
-DOOL_DIR=${DOOL_DIR:-"$PWD/dool"}
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+DOOL_DIR=${DOOL_DIR:-"$REPO_ROOT/dool_installation"}
 
 # ── Check if dool exists ───────────────────────────────────────────
 # ── Check if dool is present, executable, and working ────────────────────────
