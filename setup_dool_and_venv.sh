@@ -66,7 +66,7 @@ else
     echo "dool cloned successfully"
 fi
 
-cp -rp dool_plugins/* "$DOOL_DIR/plugins/"
+cp -rp dool_plugins/* "$DOOL_DIR/dool/plugins/"
 
 # ── Add dool to PATH ─────────────────────────────────────────────────────────
 export PATH="$DOOL_DIR/dool:$PATH"

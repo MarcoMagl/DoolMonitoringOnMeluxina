@@ -76,3 +76,4 @@ output/
 *.code-workspace
 *.json
 nvvs.log
+dool_installation/
