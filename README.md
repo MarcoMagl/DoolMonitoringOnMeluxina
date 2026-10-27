@@ -31,11 +31,11 @@ The job records CPU, disk, network, memory, system and NVIDIA GPU (usage + memor
 
 ## Example output for the simple `nvidia-dcgmi` test
 
-![Dool monitoring plot](dcgmi-monitoring/dooloutput/dool_result_profiling_5387572.pdf)
+![Dool monitoring plot](dcgmi-monitoring/dooloutput/dool_result_profiling_5387572.png)
 
 ## Example output for the Sarek workflow
 
-![Dool monitoring plot](example_with_sarek/dool-plots/run-4433692/dool_monitoring.pdf)
+![Dool monitoring plot](example_with_sarek/dool-plots/run-4433692/dool_monitoring.png)
 
 ## Files
 
