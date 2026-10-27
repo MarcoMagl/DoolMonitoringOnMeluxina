@@ -23,19 +23,20 @@ The job records CPU, disk, network, memory, system and NVIDIA GPU (usage + memor
 ## Plot the results
 
 ```bash
-./run_postprocess.sh                      # newest CSV, show interactively
 ./run_postprocess.sh <csv> <output.pdf>   # specific input and output
 ```
 
 `run_postprocess.sh` wraps `dool_postprocess.py`, which turns a `dool` CSV into a multi-panel plot.
 
+> **Note:** The plots above are just examples of what you can do with the `dool` CSV output — feel free to post-process it with your own tooling. The `dcgmi` example uses the provided `dool_postprocess.py`, while the Sarek example was plotted with the R script in `example_with_sarek/dool-plots/dool-monitoring.R`.
+
 ## Example output for the simple `nvidia-dcgmi` test
 
-![Dool monitoring plot](dooloutput/dool_result_profiling_5378308.pdf)
+![Dool monitoring plot](dcgmi-monitoring/dooloutput/dool_result_profiling_5387572.png)
 
-## Example output for the Sarek workflow
+## Example output for the Sarek workflow (plotting done without `run_postprocess.sh`)
 
-![Dool monitoring plot](example_with_sarek/dool-plots/run-4433692/dool_monitoring.pdf)
+![Dool monitoring plot](example_with_sarek/dool-plots/run-4433692/dool_monitoring.png)
 
 ## Files
 
