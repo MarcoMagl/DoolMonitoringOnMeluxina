@@ -5,7 +5,6 @@
 set -euo pipefail
 
 
-
 # "Present directory" = wherever the script is invoked from.
 CACHE_DIR="$PWD/.uv-cache"
 VENV_DIR="$PWD/.venv"
@@ -53,14 +52,15 @@ uv pip install "${REQUIREMENTS[@]}"
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 DOOL_DIR=${DOOL_DIR:-"$REPO_ROOT/dool_installation"}
+mkdir -p $DOOL_DIR
+mkdir -p $DOOL_DIR/plugins
 
-# ── Check if dool exists ───────────────────────────────────────────
 # ── Check if dool is present, executable, and working ────────────────────────
-if [ -x "$DOOL_DIR/dool" ] && "$DOOL_DIR/dool" --version > /dev/null 2>&1; then
+if [ -x "$DOOL_DIR/dool/dool" ] && "$DOOL_DIR/dool/dool" --version > /dev/null 2>&1; then
     echo "dool executable already present and working at $DOOL_DIR/dool"
 else
     echo "📥 Cloning dool from https://github.com/scottchiefbaker/dool.git..."
-    cd "$DOOL_DIR/.."
+    cd "$DOOL_DIR"
     git clone https://github.com/scottchiefbaker/dool.git
     cd -
     echo "dool cloned successfully"
@@ -69,8 +69,13 @@ fi
 cp -rp dool_plugins/* "$DOOL_DIR/plugins/"
 
 # ── Add dool to PATH ─────────────────────────────────────────────────────────
-export PATH="$DOOL_DIR:$PATH"
-echo "Added dool to PATH: $DOOL_DIR"
+export PATH="$DOOL_DIR/dool:$PATH"
+echo "Added dool to PATH: $DOOL_DIR/dool"
+
+echo
+echo "To make dool permanently available, run:"
+echo "echo 'export PATH=\"${DOOL_DIR}/dool:\$PATH\"' >> ~/.bashrc"
+echo "source ~/.bashrc"
 
 # ── Verify dool is working ───────────────────────────────────────────────────
 if dool --version > /dev/null 2>&1; then
