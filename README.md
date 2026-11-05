@@ -1,70 +1,103 @@
 # Dool Monitoring on Slurm HPC (Meluxina)
 
-Track system and **GPU** resource usage during a Slurm job with the [dool](https://github.com/scottchiefbaker/dool) tool, then plot the results.
+Track system resource usage on a compute node during a Slurm job with [dool](https://github.com/scottchiefbaker/dool), then plot the results.
+We also include here the possibility to monitor GPU activity.
 
-Although tailored for Meluxina, the scripts work on any Slurm HPC with `dool` and NVIDIA GPU monitoring.
+Everything is packaged into an [Apptainer](https://apptainer.org/) image, so it runs the same way on
+any node with no per-user Python setup. GPU access is a **run-time** concern only:
+`pynvml` picks up `libnvidia-ml.so` from the host driver via `apptainer exec --nv`, so the image
+builds even on a machine without a GPU.
 
-## Setup
+## Build
 
-```bash
-source setup_dool_and_venv.sh
-```
-
-This installs [`uv`](https://docs.astral.sh/uv/), creates a `.venv` with `matplotlib`, `pandas` and `pynvml`, clones `dool`, and copies the NVIDIA GPU plugins from `dool_plugins/`.
-
-## Run an example job
+On Meluxina (or any host with Apptainer) — no registry account and no image push required:
 
 ```bash
-sbatch dcgmi-monitoring/run_dool_dgcmi_example.sh
+apptainer build dool.sif dool-monitoring.def
 ```
 
-The job records CPU, disk, network, memory, system and NVIDIA GPU (usage + memory) metrics every second into `dooloutput/dool_profiling_<JOBID>.csv`.
+The recipe ([dool-monitoring.def](dool-monitoring.def)) bootstraps from the public `python:3.11-slim`
+base and runs [setup_dool_and_venv.sh](setup_dool_and_venv.sh) used to set up `dool` by hand:
+it installs `dool`, the NVIDIA GPU plugins from [dool_plugins/](dool_plugins/) and the plotting
+dependencies (`matplotlib`, `pandas`, `nvidia-ml-py`).
 
-## Lustre IO example
+## Record metrics for a node with NVIDIA GPU
+
+On a GPU node, grant GPU access with `--nv` and record the metrics you want:
+
+```bash
+apptainer exec --nv dool.sif \
+    dool -tTcdngym 1 --nvidia-gpu --nvidia-gpu-mem --full --output=metrics.csv
+```
+
+Run it in the background while your workload runs, then stop it:
+
+```bash
+apptainer exec --nv dool.sif dool -tTcdngym 1 --nvidia-gpu --nvidia-gpu-mem --full --output=metrics.csv &
+# ... run your workload ...
+# stop the recording once you are done
+```
+
+## Record metrics for a node without GPU
+
+On a machine without an NVIDIA GPU (or if you omit `--nv`), drop the `--nvidia-gpu*` flags and `dool`
+records its CPU / disk / network / paging / system / memory panels instead:
+
+```bash
+apptainer exec dool.sif dool -tTcdngym 1 --output=metrics.csv
+```
+
+## Plot the recorded CSV
+
+The image also ships [run_postprocess.sh](run_postprocess.sh) / [dool_postprocess.py](dool_postprocess.py),
+which turn a `dool` CSV into a multi-panel plot:
+
+```bash
+apptainer exec dool.sif bash /opt/dool-monitoring/run_postprocess.sh metrics.csv metrics.pdf
+```
+
+## Examples
+
+We provided a couple of examples ready to be run on the compute node of Meluxina.
+The goal is to see how `dool` can be used to monitor the hardware acivity of different workloads.
+
+### `nvidia-dcgmi` example
+
+`nvidia-dcgmi` is a binary readibly available on Meluxina GPU compute nodes.
+It can be used to make a quick check on the performances of a GPU card
+
+to launch it:
+
+```bash
+sbatch example_with_nvidia_dcgmi/run_dool_dgcmi_example.sh
+```
+
+This slurm job will run `dcgmi`, monitor the activity of the node in the background and plot he metrics collected at the end.
+The result is written to `dooloutput/dool_result_profiling_<JOBID>.pdf`:
+
+An example of output can be found below
+
+![Dool monitoring plot](example_with_nvidia_dcgmi/dooloutput/dool_result_profiling_5387572.png)
+
+### Lustre-io intensive example
+
+`lustre_io_workload.py` is an I/O-intensive workload that stresses the Lustre filesystem backing the
+compute node while loading data batches onto the GPU. Unlike `dcgmi`, it ships its own script and
+installs its dependencies (`torch`, `nvidia-ml-py`) on the node via `uv`, falling back to NumPy on CPU
+if CUDA is unavailable.
+
+to launch it:
 
 ```bash
 sbatch example_with_lustre_io/run_dool_lustre_io_example.sh
 ```
 
-This example stresses the Lustre filesystem that backs the working directory. The workload (`example_with_lustre_io/lustre_io_workload.py`) runs in two phases:
+This Slurm job runs the workload in the foreground and `dool` in the background, then plots the metrics collected at the end. The result is written to `dooloutput/dool_result_profiling_<JOBID>.pdf`:
 
-1. **Dataset creation** — writes a number of random dataset files to disk (Lustre *writes*).
-2. **Batch loading** — repeatedly picks random dataset files, reads them back from Lustre, assembles a batch and copies it onto the GPU (Lustre *reads* + host→device transfer).
+It has two phases, both of which hit Lustre: a **dataset-creation** phase that writes 32×128 MB files (`lustre_data/shard_*.bin`), stressing Lustre *writes*, followed by a **batch-loading** phase that reads random files back and copies them onto the GPU, stressing Lustre *reads* and the host → device transfer.
 
-Every phase and every step is logged with a wall-clock timestamp (and the GPU memory usage when available), e.g.:
+Every phase and step is logged with a wall-clock timestamp (and the used GPU memory in the `[STEP]` lines). Because the timestamps share the same clock as the Slurm log and the `dool` CSV, a spike in the `dsk/...` / `net/...` panels lines up with the `[STEP]` read lines, so the Lustre activity can be correlated with what the workload was doing at that moment.
 
-```
-2026-10-27T13:35:46 [STEP] 0000/0099 files=[shard_00003.bin,shard_00000.bin] read_mb=512.0 read_s=0.42 gpu_mem_used_gb=2.1 step_s=0.46
-```
+An example of output can be found below
 
-Because those timestamps use the same clock as the Slurm log and the `dool` CSV recorded in parallel, you can correlate the two: a spike in the `dsk/...` or `net/...` panels lines up with the `[STEP]` read lines. Scale the IO pressure with `--num-files`, `--file-size-mb`, `--num-steps` and `--files-per-step` (see `--help`).
-
-## Plot the results
-
-```bash
-./run_postprocess.sh <csv> <output.pdf>   # specific input and output
-```
-
-`run_postprocess.sh` wraps `dool_postprocess.py`, which turns a `dool` CSV into a multi-panel plot.
-
-> **Note:** The plots above are just examples of what you can do with the `dool` CSV output — feel free to post-process it with your own tooling. The `dcgmi` example uses the provided `dool_postprocess.py`, while the Sarek example was plotted with the R script in `example_with_sarek/dool-plots/dool-monitoring.R`.
-
-## Example output for the simple `nvidia-dcgmi` test
-
-![Dool monitoring plot](example_with_nvidia_dcgmi/dooloutput/dool_result_profiling_5387572.png)
-
-## Example output for the Sarek workflow (plotting done without `run_postprocess.sh`)
-
-![Dool monitoring plot](example_with_sarek/dool-plots/run-4433692/dool_monitoring.png)
-
-## Files
-
-| Path | What it does |
-| ------ | -------------- |
-| `setup_dool_and_venv.sh` | Set up `dool`, the venv and the GPU plugins |
-| `run_postprocess.sh` | Post-process a `dool` CSV into a plot |
-| `dool_postprocess.py` | Plotting script (CPU, disk, network, paging, system, memory, GPU) |
-| `dool_plugins/` | `dool` plugins for NVIDIA GPU usage and memory |
-| `dcgmi-monitoring/` | Example Slurm job based on `dcgmi` |
-| `example_with_lustre_io/` | Example Slurm job that stresses Lustre IO (dataset creation + GPU batch loading) |
-| `example_with_sarek/` | Example Slurm job based on Sarek |
+![Dool monitoring plot](example_with_lustre_io/dooloutput/dool_result_profiling_5387572.png)

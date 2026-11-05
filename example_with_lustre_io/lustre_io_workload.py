@@ -29,10 +29,7 @@ from datetime import datetime
 import numpy as np
 
 # --- Optional GPU back-ends (the workload also runs CPU-only) ---------------
-try:
-    import torch
-except Exception:  # torch is optional; fall back to NumPy on CPU
-    torch = None
+import torch
 
 try:
     import pynvml
