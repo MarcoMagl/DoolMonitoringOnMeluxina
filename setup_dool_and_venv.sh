@@ -52,23 +52,23 @@ uv pip install "${REQUIREMENTS[@]}"
 # this script runs inside the container image, where .git is not copied in).
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 DOOL_DIR=${DOOL_DIR:-"$REPO_ROOT/dool_installation"}
-mkdir -p $DOOL_DIR
+mkdir -p "$DOOL_DIR"
 
 # ── Check if dool is present, executable, and working ────────────────────────
 if [ -x "$DOOL_DIR/dool/dool" ] && "$DOOL_DIR/dool/dool" --version > /dev/null 2>&1; then
     echo "dool executable already present and working at $DOOL_DIR/dool"
 else
     echo "📥 Cloning dool from https://github.com/scottchiefbaker/dool.git..."
-    cd "$DOOL_DIR"
+    pushd "$DOOL_DIR" >/dev/null
     git clone https://github.com/scottchiefbaker/dool.git
-    cd -
+    popd >/dev/null
     echo "dool cloned successfully"
 fi
 
 # dool discovers plugins in the plugins/ dir next to its own script
 # (os.path.dirname(__file__) + '/plugins/'), i.e. $DOOL_DIR/dool/plugins.
 mkdir -p "$DOOL_DIR/dool/plugins"
-cp -rp dool_plugins/* "$DOOL_DIR/dool/plugins/"
+cp -rp "$REPO_ROOT/dool_plugins/"* "$DOOL_DIR/dool/plugins/"
 
 # ── Add dool to PATH ─────────────────────────────────────────────────────────
 export PATH="$DOOL_DIR/dool:$PATH"

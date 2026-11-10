@@ -14,7 +14,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --output=%x.out
-#SBATCH --error=%x.out
+#SBATCH --error=%x.err
 #SBATCH --time=00:15:00
 
 set -euo pipefail
@@ -34,7 +34,7 @@ fi
 export DOOL_OUTPUT_DIR=$REPO_ROOT/example_with_nvidia_dcgmi/dooloutput
 mkdir -p $DOOL_OUTPUT_DIR
 export DOOL_OUTPUT_CSV=$DOOL_OUTPUT_DIR/dool_profiling_${SLURM_JOBID}.csv
-export DOOL_OUTPUT_PLOTS="$DOOL_OUTPUT_DIR/dool_result_profiling_${SLURM_JOBID}.pdf"
+export DOOL_OUTPUT_PLOTS="$DOOL_OUTPUT_DIR/dool_result_profiling_${SLURM_JOBID}.png"
 
 
 # Record metrics with the container (GPU libraries injected via --nv), in the

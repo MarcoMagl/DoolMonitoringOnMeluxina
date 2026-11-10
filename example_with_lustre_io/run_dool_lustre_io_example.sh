@@ -23,7 +23,7 @@ ml CUDA
 ml Apptainer
 ml Python
 
-# set -euo pipefail
+set -euo pipefail
 
 # Repository root (this script lives in example_with_lustre_io/) and image.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -36,12 +36,11 @@ fi
 
 export DOOL_OUTPUT_DIR=$REPO_ROOT/example_with_lustre_io/dooloutput
 export DOOL_OUTPUT_CSV=$DOOL_OUTPUT_DIR/dool_profiling_${SLURM_JOBID}.csv
-export DOOL_OUTPUT_PLOTS="$DOOL_OUTPUT_DIR/dool_result_profiling_${SLURM_JOBID}.pdf"
+export DOOL_OUTPUT_PLOTS="$DOOL_OUTPUT_DIR/dool_result_profiling_${SLURM_JOBID}.png"
 
 mkdir -p $DOOL_OUTPUT_DIR 
 
 
-apptainer exec --nv     docker://pytorch/pytorch:2.15.0-cuda13.2-cudnn9-runtime     python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
 # Record metrics with the container (GPU via --nv), in the background, every
 # second. The workload's [STEP] timestamps use the same clock, so they line up
 # with the dsk/net/paging panels afterwards.
@@ -67,9 +66,5 @@ kill -TERM -- -"$DOOL_PID" 2>/dev/null || true
 wait "$DOOL_PID" 2>/dev/null || true
 
 # Plot the recorded CSV with the container's post-processor.
-# Plot the recorded CSV with the container's post-processor.
 echo "Starting post-processing of dool output ! "
 apptainer exec -B $DOOL_OUTPUT_DIR --nv "$SIF" bash /opt/dool-monitoring/run_postprocess.sh "$DOOL_OUTPUT_CSV" "$DOOL_OUTPUT_PLOTS"
-
-# The workload venv is local to this example; drop it.
-# deactivate 2>/dev/null || true
