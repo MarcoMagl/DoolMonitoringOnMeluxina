@@ -1,0 +1,70 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+# Self-contained Apptainer recipe for `dool` + the NVIDIA GPU plugins in
+# dool_plugins/. It builds directly on Meluxina (or another machine) with:
+#
+#     apptainer build dool.sif dool-monitoring.def
+#
+# No registry account and no image push are required: the only thing pulled from
+# a registry is the public python:3.11-slim base. GPU access at run time is
+# granted with `apptainer exec --nv` (the gpu compute node driver provides libnvidia-ml.so,
+# which the pynvml-based plugins need).
+
+%labels
+    Author LuxProvide - Marco Magliulo
+    Description dool system monitoring + NVIDIA GPU plugins (dool_plugins/)
+
+%files
+    setup_dool_and_venv.sh /opt/dool-monitoring/setup_dool_and_venv.sh
+    dool_plugins /opt/dool-monitoring/dool_plugins
+    run_postprocess.sh /opt/dool-monitoring/run_postprocess.sh
+    dool_postprocess.py /opt/dool-monitoring/dool_postprocess.py
+
+%post
+    #!/bin/bash
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+
+    # dool clones from GitHub and reads /proc; pip/uv fetch wheels over HTTPS.
+    apt-get update
+    apt-get install -y --no-install-recommends git procps ca-certificates
+
+    # Install uv first so setup_dool_and_venv.sh detects it 
+    pip install --no-cache-dir uv
+
+    # creates the venv (matplotlib/pandas/pynvml), clones
+    # dool and copies the NVIDIA GPU plugins into dool's plugins/ dir.
+    cd /opt/dool-monitoring
+    bash setup_dool_and_venv.sh
+
+    # The uv cache is only useful during the build; drop it to keep the image slim.
+    rm -rf /opt/dool-monitoring/.uv-cache
+
+%environment
+    export VIRTUAL_ENV=/opt/dool-monitoring/.venv
+    # Put the venv (which has pynvml) and dool first on PATH so that `python`/
+    # `python3` -- and therefore dool, which resolves its interpreter via
+    # `#!/usr/bin/env python3` -- use the venv.
+    export PATH=/opt/dool-monitoring/.venv/bin:/opt/dool-monitoring/dool_installation/dool:$PATH
+    export MPLBACKEND=Agg
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    exec "$@"
+
+%help
+    dool monitoring container (dool + NVIDIA GPU plugins from dool_plugins/).
+
+    Record metrics (GPU, on a node with an NVIDIA GPU, via `--nv`):
+        apptainer exec --nv dool.sif \
+            dool -tTcdngym 1 --nvidia-gpu --nvidia-gpu-mem --full --output=metrics.csv
+
+    Record metrics (CPU-only, no NVIDIA GPU needed):
+        apptainer exec dool.sif dool -tTcdngym 1 --output=metrics.csv
+
+    Plot a recorded CSV:
+        apptainer exec dool.sif bash /opt/dool-monitoring/run_postprocess.sh \
+            metrics.csv metrics.pdf

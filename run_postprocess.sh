@@ -7,7 +7,6 @@
 # If OUTPUT_IMAGE is omitted, the plot is shown interactively (matplotlib).
 #
 
-set -x
 # Directory this script lives in (used to locate the post-processor).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

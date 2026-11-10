@@ -77,3 +77,6 @@ output/
 *.json
 nvvs.log
 dool_installation/
+
+ **/lustre_data/
+ *.sif
